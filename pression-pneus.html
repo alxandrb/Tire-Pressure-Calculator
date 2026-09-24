@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pression de pneu — calculateur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#DCDAD2;
+    --panel:#F5F4EF;
+    --panel-2:#EAE8E1;
+    --ink:#16303A;
+    --ink-soft:#5A6B71;
+    --line:#B9B7AD;
+    --front:#1D7A8C;
+    --rear:#B4651A;
+    --alert:#9C2B1E;
+    --ok:#2F6B3C;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ground);
+    color:var(--ink);
+    font-family:Archivo,'Helvetica Neue',Arial,sans-serif;
+    font-size:16px;
+    line-height:1.45;
+    font-variant-numeric:tabular-nums;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 18px 70px}
+  h1{font-size:clamp(28px,6vw,44px);font-weight:800;letter-spacing:-.02em;margin:0 0 6px;line-height:1.05}
+  .lede{margin:0 0 22px;max-width:62ch;color:var(--ink-soft);font-size:15px}
+
+  /* ---- readout ---- */
+  .readout{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:18px 18px 8px}
+  .readhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+  .readhead h2{font-size:15px;font-weight:600;margin:0;color:var(--ink-soft)}
+  .unit-switch{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+  .unit-switch button{font:inherit;font-size:13px;font-weight:600;padding:5px 12px;border:0;background:transparent;color:var(--ink-soft);cursor:pointer}
+  .unit-switch button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+  .wheels{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.wheels{grid-template-columns:1fr}}
+  .wheel{padding-bottom:12px}
+  .wheel h3{margin:0;font-size:14px;font-weight:600}
+  .wheel.front h3{color:var(--front)}
+  .wheel.rear h3{color:var(--rear)}
+  .value{font-size:clamp(46px,12vw,68px);font-weight:800;letter-spacing:-.03em;line-height:1;margin:2px 0 0}
+  .value small{font-size:.30em;font-weight:600;letter-spacing:0;margin-left:6px;color:var(--ink-soft)}
+  .sub{font-size:13px;color:var(--ink-soft);margin-top:4px}
+  .band{margin-top:12px;height:26px;position:relative}
+  .band .track{position:absolute;top:9px;left:0;right:0;height:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:1px}
+  .band .safe{position:absolute;top:9px;height:8px;background:#CFD8D2}
+  .band .mark{position:absolute;top:2px;width:3px;height:22px;background:var(--ink);transition:left .25s ease}
+  .wheel.front .mark{background:var(--front)}
+  .wheel.rear .mark{background:var(--rear)}
+  .band .ends{position:absolute;top:22px;left:0;right:0;display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft)}
+  @media(prefers-reduced-motion:reduce){.band .mark{transition:none}}
+  .flags{margin:4px 0 0;padding:0;list-style:none}
+  .flags li{font-size:13.5px;padding:7px 10px;margin-top:7px;border-left:3px solid var(--alert);background:#EFE6E3}
+  .flags li.info{border-left-color:var(--ink-soft);background:var(--panel-2)}
+  .flags li.good{border-left-color:var(--ok);background:#E3EBE3}
+
+  /* ---- layout ---- */
+  .cols{display:grid;grid-template-columns:1.15fr .85fr;gap:26px;margin-top:26px;align-items:start}
+  @media(max-width:860px){.cols{grid-template-columns:1fr;gap:18px}}
+  .sticky{position:sticky;top:18px}
+  @media(max-width:860px){.sticky{position:static}}
+
+  fieldset{border:0;border-top:1px solid var(--line);margin:0 0 4px;padding:16px 0 6px}
+  fieldset:first-of-type{border-top:0;padding-top:4px}
+  legend{font-size:15px;font-weight:600;padding:0}
+  .hint{font-size:13px;color:var(--ink-soft);margin:2px 0 12px;max-width:52ch}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field.full{grid-column:1/-1}
+  label{font-size:13.5px;font-weight:500}
+  label .n{color:var(--ink-soft);font-weight:400}
+  input[type=number],select{
+    font:inherit;font-size:15px;padding:8px 9px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);border-radius:2px;width:100%;
+  }
+  input[type=number]:focus-visible,select:focus-visible,button:focus-visible,input[type=range]:focus-visible{
+    outline:2px solid var(--front);outline-offset:2px
+  }
+  input[type=range]{width:100%;accent-color:var(--ink)}
+  .checkrow{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:2px}
+  .checkrow input{accent-color:var(--ink);width:17px;height:17px}
+  .slider-ends{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft)}
+  details{border-top:1px solid var(--line);padding-top:12px;margin-top:10px}
+  summary{font-size:15px;font-weight:600;cursor:pointer}
+  details[open] summary{margin-bottom:10px}
+
+  /* ---- analysis ---- */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:16px;margin-top:16px}
+  .card h3{margin:0 0 4px;font-size:15px;font-weight:600}
+  .card p.note{font-size:13px;color:var(--ink-soft);margin:0 0 10px;max-width:56ch}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:6px 0;border-bottom:1px solid var(--panel-2)}
+  th{font-weight:500;color:var(--ink-soft)}
+  td:last-child,th:last-child{text-align:right}
+  tr:last-child td{border-bottom:0}
+  .chart{width:100%;height:auto;display:block;margin-top:4px}
+  .reset{font:inherit;font-size:13.5px;font-weight:600;background:transparent;border:1px solid var(--line);
+    padding:8px 14px;border-radius:2px;cursor:pointer;color:var(--ink);margin-top:14px}
+  .reset:hover{background:var(--panel-2)}
+  footer{margin-top:28px;font-size:12.5px;color:var(--ink-soft);max-width:70ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Pression de pneu</h1>
+  <p class="lede">Le calcul part de l'affaissement de carcasse sous charge, puis corrige pour le revêtement, la vitesse, le montage et la température. Tous les champs recalculent le résultat immédiatement.</p>
+
+  <section class="readout" aria-live="polite">
+    <div class="readhead">
+      <h2>Pression à régler au manomètre</h2>
+      <div class="unit-switch" role="group" aria-label="Unité de pression">
+        <button type="button" id="u-psi" aria-pressed="true">psi</button>
+        <button type="button" id="u-bar" aria-pressed="false">bar</button>
+      </div>
+    </div>
+    <div class="wheels">
+      <div class="wheel front">
+        <h3>Avant</h3>
+        <p class="value" id="v-front">—<small id="u-front">psi</small></p>
+        <p class="sub" id="s-front"></p>
+        <div class="band" id="b-front">
+          <div class="track"></div><div class="safe"></div><div class="mark"></div>
+          <div class="ends"><span class="lo"></span><span class="hi"></span></div>
+        </div>
+      </div>
+      <div class="wheel rear">
+        <h3>Arrière</h3>
+        <p class="value" id="v-rear">—<small id="u-rear">psi</small></p>
+        <p class="sub" id="s-rear"></p>
+        <div class="band" id="b-rear">
+          <div class="track"></div><div class="safe"></div><div class="mark"></div>
+          <div class="ends"><span class="lo"></span><span class="hi"></span></div>
+        </div>
+      </div>
+    </div>
+    <ul class="flags" id="flags"></ul>
+  </section>
+
+  <div class="cols">
+
+    <!-- ============ ENTRÉES ============ -->
+    <form id="form">
+
+      <fieldset>
+        <legend>Charge</legend>
+        <p class="hint">Le poids total porté par chaque roue est le facteur dominant. Comptez l'équipement réellement embarqué au départ.</p>
+        <div class="grid">
+          <div class="field">
+            <label for="mRider">Cycliste <span class="n">kg</span></label>
+            <input type="number" id="mRider" value="72" min="30" max="150" step="0.5">
+          </div>
+          <div class="field">
+            <label for="mBike">Vélo <span class="n">kg</span></label>
+            <input type="number" id="mBike" value="9.5" min="4" max="20" step="0.1">
+          </div>
+          <div class="field">
+            <label for="mGear">Bidons, nutrition, sacoches <span class="n">kg</span></label>
+            <input type="number" id="mGear" value="2" min="0" max="15" step="0.1">
+          </div>
+          <div class="field">
+            <label for="posture">Position tenue la plupart du temps</label>
+            <select id="posture">
+              <option value="46">Prolongateurs, buste bas</option>
+              <option value="44" selected>Prolongateurs, position haute</option>
+              <option value="42">Bases ou cocottes</option>
+              <option value="custom">Répartition mesurée</option>
+            </select>
+          </div>
+          <div class="field full" id="distWrap" hidden>
+            <label for="dist">Part du poids sur la roue avant <span class="n"><span id="distVal">44</span> %</span></label>
+            <input type="range" id="dist" min="36" max="54" step="0.5" value="44">
+            <div class="slider-ends"><span>36 % avant</span><span>54 % avant</span></div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Pneus et jantes</legend>
+        <p class="hint">La largeur qui compte est celle du pneu une fois monté : une jante large étale la carcasse et fait gagner quelques millimètres.</p>
+        <div class="checkrow"><input type="checkbox" id="same" checked><label for="same">Même montage à l'avant et à l'arrière</label></div>
+        <div class="grid" style="margin-top:12px">
+          <div class="field">
+            <label for="wF">Largeur nominale avant <span class="n">mm</span></label>
+            <input type="number" id="wF" value="26" min="19" max="50" step="1">
+          </div>
+          <div class="field">
+            <label for="wR">Largeur nominale arrière <span class="n">mm</span></label>
+            <input type="number" id="wR" value="26" min="19" max="50" step="1">
+          </div>
+          <div class="field">
+            <label for="irwF">Largeur interne jante avant <span class="n">mm</span></label>
+            <input type="number" id="irwF" value="21" min="13" max="35" step="0.5">
+          </div>
+          <div class="field">
+            <label for="irwR">Largeur interne jante arrière <span class="n">mm</span></label>
+            <input type="number" id="irwR" value="21" min="13" max="35" step="0.5">
+          </div>
+          <div class="field">
+            <label for="mount">Montage</label>
+            <select id="mount">
+              <option value="tubeless" selected>Tubeless avec préventif</option>
+              <option value="butyl">Chambre butyle</option>
+              <option value="latex">Chambre latex</option>
+              <option value="tpu">Chambre TPU</option>
+              <option value="tubular">Boyau</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="casing">Carcasse</label>
+            <select id="casing">
+              <option value="supple">Souple, compétition</option>
+              <option value="allround" selected>Polyvalente</option>
+              <option value="tough">Renforcée anti-crevaison</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="hook">Profil de jante</label>
+            <select id="hook">
+              <option value="hooked" selected>À crochets</option>
+              <option value="hookless">Sans crochet</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pmax">Pression max annoncée <span class="n">psi, facultatif</span></label>
+            <input type="number" id="pmax" min="30" max="200" step="1" placeholder="—">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Parcours</legend>
+        <p class="hint">Un revêtement dégradé déplace l'optimum vers le bas : au-delà d'un certain seuil, le pneu cesse d'absorber les aspérités et c'est le corps du cycliste qui encaisse, ce qui coûte plus cher que le gain d'hystérésis.</p>
+        <div class="grid">
+          <div class="field full">
+            <label for="surf">Revêtement dominant</label>
+            <select id="surf">
+              <option value="velodrome">Piste ou béton lissé</option>
+              <option value="smooth">Asphalte neuf, très lisse</option>
+              <option value="avg" selected>Asphalte courant, correct</option>
+              <option value="coarse">Enduit gravillonné, granuleux</option>
+              <option value="rough">Chaussée dégradée, fissurée</option>
+              <option value="verybad">Très mauvais, nids-de-poule</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="speed">Vitesse moyenne visée <span class="n">km/h</span></label>
+            <input type="number" id="speed" value="36" min="15" max="60" step="0.5">
+          </div>
+          <div class="field">
+            <label for="dur">Durée de l'effort</label>
+            <select id="dur">
+              <option value="short">Moins de 1 h 30</option>
+              <option value="mid" selected>1 h 30 à 4 h</option>
+              <option value="long">Plus de 4 h</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tech">Virages et relances</label>
+            <select id="tech">
+              <option value="low">Parcours roulant, peu de virages</option>
+              <option value="mid" selected>Quelques épingles ou ronds-points</option>
+              <option value="high">Très sinueux, descentes techniques</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="wet">Chaussée</label>
+            <select id="wet">
+              <option value="dry" selected>Sèche</option>
+              <option value="wet">Mouillée</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Arbitrage</legend>
+        <p class="hint">Le rendement pur et la marge de sécurité ne pointent pas dans la même direction. Ce curseur décale la recommandation de quelques psi.</p>
+        <div class="field full">
+          <input type="range" id="bias" min="-100" max="100" step="5" value="0">
+          <div class="slider-ends"><span>Confort et adhérence</span><span>Rendement pur</span></div>
+        </div>
+      </fieldset>
+
+      <details>
+        <summary>Température et altitude</summary>
+        <p class="hint">Un pneu gonflé au frais et roulé au chaud prend de la pression tout seul. Le calcul renvoie la valeur à afficher au manomètre pour atteindre la cible une fois en course.</p>
+        <div class="grid">
+          <div class="field">
+            <label for="tSet">Température au gonflage <span class="n">°C</span></label>
+            <input type="number" id="tSet" value="20" min="-20" max="50" step="1">
+          </div>
+          <div class="field">
+            <label for="tRide">Température en course <span class="n">°C</span></label>
+            <input type="number" id="tRide" value="24" min="-20" max="55" step="1">
+          </div>
+          <div class="field">
+            <label for="aSet">Altitude au gonflage <span class="n">m</span></label>
+            <input type="number" id="aSet" value="0" min="0" max="4000" step="10">
+          </div>
+          <div class="field">
+            <label for="aRide">Altitude moyenne du parcours <span class="n">m</span></label>
+            <input type="number" id="aRide" value="0" min="0" max="4000" step="10">
+          </div>
+        </div>
+      </details>
+
+      <button type="button" class="reset" id="reset">Rétablir les valeurs par défaut</button>
+    </form>
+
+    <!-- ============ SORTIES ============ -->
+    <div>
+      <div class="sticky">
+        <div class="card">
+          <h3>Coût énergétique estimé</h3>
+          <p class="note">Somme de l'hystérésis de la carcasse, qui baisse quand la pression monte, et des pertes par vibration, qui explosent au-delà du seuil. Le creux de la courbe est la pression retenue.</p>
+          <svg class="chart" id="chart" viewBox="0 0 640 300" role="img" aria-label="Courbe des pertes en fonction de la pression arrière"></svg>
+          <p class="note" id="sens" style="margin-top:8px"></p>
+        </div>
+
+        <div class="card">
+          <h3>Détail du calcul</h3>
+          <table id="breakdown"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Modèle d'affaissement calibré sur les mesures de charge et de largeur publiées pour un affaissement de 15 %, complété par des coefficients de correction issus des travaux publics sur l'impédance des pneumatiques. Les pertes en watts sont une estimation relative : ce qui est fiable, c'est la position du creux, pas la valeur absolue. Vérifiez toujours les pressions maximales gravées sur la jante et inscrites sur le flanc du pneu.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var PSI_PER_BAR = 14.5037738;
+  var unit = 'psi';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var DEFAULTS = {};
+  var fields = ['mRider','mBike','mGear','posture','dist','wF','wR','irwF','irwR','mount','casing','hook','pmax','surf','speed','dur','tech','wet','bias','tSet','tRide','aSet','aRide'];
+  fields.forEach(function(f){ DEFAULTS[f] = $(f).value; });
+  DEFAULTS.same = true;
+
+  // ---------- coefficients ----------
+  var MOUNT = {
+    tubeless:{p:0.95, crr:-0.0004, pinch:0.70, label:'Tubeless'},
+    butyl:   {p:1.00, crr:+0.0006, pinch:0.80, label:'Chambre butyle'},
+    latex:   {p:0.99, crr:+0.0001, pinch:0.78, label:'Chambre latex'},
+    tpu:     {p:1.00, crr:+0.0003, pinch:0.78, label:'Chambre TPU'},
+    tubular: {p:0.97, crr:+0.0002, pinch:0.72, label:'Boyau'}
+  };
+  var CASING = {
+    supple:{p:0.97, crr:0.0032, label:'Carcasse souple'},
+    allround:{p:1.00, crr:0.0042, label:'Carcasse polyvalente'},
+    tough:{p:1.03, crr:0.0056, label:'Carcasse renforcée'}
+  };
+  var SURF = {
+    velodrome:{p:1.12, b:1.5, label:'Piste'},
+    smooth:{p:1.05, b:1.8, label:'Asphalte lisse'},
+    avg:{p:1.00, b:2.2, label:'Asphalte courant'},
+    coarse:{p:0.92, b:2.8, label:'Gravillonné'},
+    rough:{p:0.85, b:3.4, label:'Chaussée dégradée'},
+    verybad:{p:0.78, b:4.2, label:'Très dégradé'}
+  };
+  var DUR = {short:{p:1.00,label:'Moins de 1 h 30'}, mid:{p:0.99,label:'1 h 30 à 4 h'}, long:{p:0.97,label:'Plus de 4 h'}};
+  var TECH = {low:{p:1.00,label:'Peu de virages'}, mid:{p:0.99,label:'Virages moyens'}, high:{p:0.97,label:'Très sinueux'}};
+
+  function atm(alt){ return 14.6959 * Math.pow(1 - 2.25577e-5 * alt, 5.25588); }
+  function fmt(psi){
+    if(unit === 'bar'){ return (psi/PSI_PER_BAR).toFixed(2); }
+    return psi.toFixed(1);
+  }
+  function fmtShort(psi){
+    if(unit === 'bar'){ return (psi/PSI_PER_BAR).toFixed(1); }
+    return Math.round(psi);
+  }
+
+  // ---------- modèle ----------
+  function wheelPressure(load, wLabel, irw, m){
+    var wEff = wLabel + 0.4 * (irw - 19);
+    if(wEff < wLabel * 0.9) wEff = wLabel * 0.9;
+    var base = 266 * load / Math.pow(wEff, 1.5);   // psi pour 15 % d'affaissement
+    var target = base * m.total;
+    return {wEff:wEff, base:base, target:target};
+  }
+
+  function compute(){
+    var mRider = +$('mRider').value || 0,
+        mBike  = +$('mBike').value || 0,
+        mGear  = +$('mGear').value || 0;
+    var M = mRider + mBike + mGear;
+
+    var posture = $('posture').value;
+    var frontPct;
+    if(posture === 'custom'){ frontPct = +$('dist').value; $('distWrap').hidden = false; }
+    else { frontPct = +posture; $('distWrap').hidden = true; $('dist').value = frontPct; }
+    $('distVal').textContent = frontPct;
+
+    var same = $('same').checked;
+    $('wR').disabled = same; $('irwR').disabled = same;
+    if(same){ $('wR').value = $('wF').value; $('irwR').value = $('irwF').value; }
+
+    var mount = MOUNT[$('mount').value],
+        casing = CASING[$('casing').value],
+        surf = SURF[$('surf').value],
+        dur = DUR[$('dur').value],
+        tech = TECH[$('tech').value],
+        wet = $('wet').value === 'wet';
+
+    var v = +$('speed').value || 30;
+    var mSpeed = 1 - 0.004 * (v - 32);
+    mSpeed = Math.min(1.06, Math.max(0.90, mSpeed));
+
+    var bias = +$('bias').value / 100;               // -1 confort, +1 rendement
+    var mBias = 1 + bias * (bias > 0 ? 0.04 : 0.06);
+    var mWet = wet ? 0.97 : 1;
+
+    var mTotal = mount.p * casing.p * surf.p * mSpeed * dur.p * tech.p * mWet * mBias;
+    var mods = {total:mTotal};
+
+    var loadF = M * frontPct / 100, loadR = M * (1 - frontPct/100);
+    var F = wheelPressure(loadF, +$('wF').value || 25, +$('irwF').value || 19, mods);
+    var R = wheelPressure(loadR, +$('wR').value || 25, +$('irwR').value || 19, mods);
+
+    // limites
+    var pmaxUser = parseFloat($('pmax').value);
+    var hookless = $('hook').value === 'hookless';
+    var flags = [];
+
+    [F, R].forEach(function(W, i){
+      var name = i === 0 ? 'avant' : 'arrière';
+      W.floor = W.base * mount.pinch;
+      var ceil = W.base * 1.45;
+      W.ceilSource = null;
+      if(!isNaN(pmaxUser) && pmaxUser < ceil){ ceil = pmaxUser; W.ceilSource = 'la pression max annoncée'; }
+      if(hookless && 72.5 < ceil){ ceil = 72.5; W.ceilSource = 'la limite de 72,5 psi des jantes sans crochet'; }
+      W.ceil = ceil;
+      W.final = W.target;
+      if(W.final > ceil){ W.final = ceil; W.capped = true; }
+      if(W.final < W.floor){ W.final = W.floor; W.floored = true; }
+      W.drop = 15 * W.base / W.final;
+      W.name = name;
+    });
+
+    if(F.capped || R.capped){
+      var src = (R.capped ? R.ceilSource : F.ceilSource) || 'une limite matérielle';
+      flags.push({t:'La pression calculée dépasse ' + src + '. La valeur affichée est plafonnée, l\'affaissement réel sera plus important que visé.', c:''});
+    }
+    if(F.floored || R.floored){
+      flags.push({t:'La cible descend sous le seuil de pincement du montage choisi. La valeur affichée est relevée pour garder une marge sur les chocs.', c:''});
+    }
+    if(hookless && !F.capped && !R.capped){
+      flags.push({t:'Jantes sans crochet : la limite absolue de 72,5 psi reste valable quelle que soit l\'indication du pneu.', c:'info'});
+    }
+    if(R.target > 100){
+      flags.push({t:'Au-delà de 100 psi, la carcasse ne s\'écrase plus assez pour absorber les aspérités et le gain théorique se perd en vibrations. Vérifiez la largeur saisie.', c:''});
+    }
+    var wEffR = R.wEff;
+    if(wEffR - (+$('wR').value) >= 1.5){
+      flags.push({t:'Avec cette jante, le pneu arrière se monte à environ ' + wEffR.toFixed(1) + ' mm au lieu de ' + $('wR').value + ' mm. Le calcul utilise la largeur réelle.', c:'info'});
+    }
+
+    // correction thermique et altitude
+    var tSet = +$('tSet').value, tRide = +$('tRide').value;
+    var pSet = atm(+$('aSet').value), pRide = atm(+$('aRide').value);
+    var ratio = (tSet + 273.15) / (tRide + 273.15);
+    [F, R].forEach(function(W){
+      W.gauge = (W.final + pRide) * ratio - pSet;
+      if(W.gauge < 10) W.gauge = 10;
+    });
+    var deltaR = R.gauge - R.final;
+    if(Math.abs(deltaR) >= 1.5){
+      flags.push({
+        t:'Écart thermique et barométrique : réglez ' + fmt(Math.abs(deltaR)) + ' ' + unit + ' ' +
+          (deltaR < 0 ? 'en dessous' : 'au-dessus') + ' de la cible, le pneu rejoindra la bonne valeur en course.',
+        c:'info'
+      });
+    }
+    if(!flags.length){ flags.push({t:'Aucune limite matérielle atteinte, la recommandation est celle du modèle.', c:'good'}); }
+
+    // pertes
+    var crr = Math.max(0.0022, casing.crr + mount.crr);
+    var vms = v / 3.6;
+    var baseW = crr * M * 9.81 * vms;
+    var b = surf.b;
+    var A = baseW / (1 + 1/b), B = A/b;
+    function loss(p){ return A * (R.final / p) + B * Math.pow(p / R.final, b); }
+
+    return {M:M, frontPct:frontPct, F:F, R:R, flags:flags, loss:loss, lossOpt:loss(R.final),
+            b:b, mTotal:mTotal, mount:mount, casing:casing, surf:surf, dur:dur, tech:tech,
+            mSpeed:mSpeed, mBias:mBias, mWet:mWet, wet:wet, v:v, crr:crr, baseW:baseW};
+  }
+
+  // ---------- rendu ----------
+  function renderWheel(prefix, W){
+    $('v-' + prefix).firstChild.nodeValue = fmt(W.gauge);
+    $('u-' + prefix).textContent = unit;
+    $('s-' + prefix).textContent = 'Affaissement ' + W.drop.toFixed(1) + ' % · ' +
+      (unit === 'psi' ? (W.gauge/PSI_PER_BAR).toFixed(2) + ' bar' : W.gauge.toFixed(1) + ' psi');
+    var box = $('b-' + prefix);
+    var lo = W.floor * 0.85, hi = W.ceil * 1.08;
+    var span = hi - lo;
+    var safe = box.querySelector('.safe');
+    safe.style.left = ((W.floor - lo)/span*100) + '%';
+    safe.style.width = ((W.ceil - W.floor)/span*100) + '%';
+    box.querySelector('.mark').style.left = ((Math.min(Math.max(W.gauge, lo), hi) - lo)/span*100) + '%';
+    box.querySelector('.lo').textContent = fmtShort(W.floor) + ' min';
+    box.querySelector('.hi').textContent = fmtShort(W.ceil) + ' max';
+  }
+
+  function renderChart(d){
+    var svg = $('chart');
+    var W = 640, H = 300, mL = 46, mR = 14, mT = 16, mB = 42;
+    var p0 = d.R.final * 0.55, p1 = d.R.final * 1.6;
+    var pts = [], minY = Infinity, maxY = -Infinity, i, p, y;
+    for(i = 0; i <= 120; i++){
+      p = p0 + (p1 - p0) * i / 120;
+      y = d.loss(p);
+      pts.push([p, y]);
+      if(y < minY) minY = y; if(y > maxY) maxY = y;
+    }
+    maxY = Math.min(maxY, minY * 1.9);
+    var X = function(p){ return mL + (p - p0)/(p1 - p0) * (W - mL - mR); };
+    var Y = function(v){ return mT + (1 - (v - minY*0.96)/(maxY - minY*0.96)) * (H - mT - mB); };
+
+    var path = pts.map(function(pt, k){ return (k ? 'L' : 'M') + X(pt[0]).toFixed(1) + ' ' + Math.max(mT, Y(pt[1])).toFixed(1); }).join(' ');
+    var area = path + ' L' + X(p1).toFixed(1) + ' ' + (H - mB) + ' L' + X(p0).toFixed(1) + ' ' + (H - mB) + ' Z';
+
+    var ticks = '';
+    var step = unit === 'bar' ? PSI_PER_BAR * 0.5 : 10;
+    var t0 = Math.ceil(p0/step)*step;
+    for(p = t0; p <= p1; p += step){
+      ticks += '<line x1="'+X(p).toFixed(1)+'" y1="'+mT+'" x2="'+X(p).toFixed(1)+'" y2="'+(H-mB)+'" stroke="#DCDAD2" stroke-width="1"/>' +
+               '<text x="'+X(p).toFixed(1)+'" y="'+(H-mB+18)+'" text-anchor="middle" font-size="12" fill="#5A6B71">'+fmtShort(p)+'</text>';
+    }
+    var opt = d.R.final, optY = Y(d.lossOpt);
+    var stepP = unit === 'bar' ? PSI_PER_BAR * 0.5 : 10;
+    var stepLabel = unit === 'bar' ? '0,5 bar' : '10 psi';
+    var extra10 = d.loss(opt + stepP) - d.lossOpt, less10 = d.loss(Math.max(opt - stepP, opt * 0.4)) - d.lossOpt;
+
+    svg.innerHTML =
+      '<rect x="'+mL+'" y="'+mT+'" width="'+(W-mL-mR)+'" height="'+(H-mT-mB)+'" fill="#EAE8E1"/>' +
+      ticks +
+      '<path d="'+area+'" fill="rgba(180,101,26,0.13)"/>' +
+      '<path d="'+path+'" fill="none" stroke="#B4651A" stroke-width="2.5"/>' +
+      '<line x1="'+X(opt).toFixed(1)+'" y1="'+mT+'" x2="'+X(opt).toFixed(1)+'" y2="'+(H-mB)+'" stroke="#16303A" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+      '<circle cx="'+X(opt).toFixed(1)+'" cy="'+optY.toFixed(1)+'" r="5" fill="#16303A"/>' +
+      '<text x="'+(X(opt)+9).toFixed(1)+'" y="'+Math.max(mT+14, optY-10).toFixed(1)+'" font-size="13" font-weight="600" fill="#16303A">'+fmt(opt)+' '+unit+'</text>' +
+      '<line x1="'+mL+'" y1="'+(H-mB)+'" x2="'+(W-mR)+'" y2="'+(H-mB)+'" stroke="#B9B7AD" stroke-width="1"/>' +
+      '<text x="'+mL+'" y="'+(H-6)+'" font-size="12" fill="#5A6B71">Pression arrière en '+unit+'</text>' +
+      '<text transform="translate(14,'+((H-mB+mT)/2)+') rotate(-90)" text-anchor="middle" font-size="12" fill="#5A6B71">Pertes estimées, W</text>' +
+      '<text x="'+(mL+8)+'" y="'+(mT+18)+'" font-size="12" fill="#5A6B71">'+d.lossOpt.toFixed(1)+' W au creux</text>';
+
+    $('sens').textContent = stepLabel + ' de trop coûtent environ ' + extra10.toFixed(1) +
+      ' W, ' + stepLabel + ' de moins environ ' + less10.toFixed(1) + ' W. ' +
+      (d.b >= 2.8 ? 'Sur ce revêtement la pénalité est franchement asymétrique : mieux vaut se tromper par le bas.'
+                  : 'Sur ce revêtement la courbe est plate autour du creux, quelques psi d\'écart changent peu.');
+  }
+
+  function row(label, value){ return '<tr><th>' + label + '</th><td>' + value + '</td></tr>'; }
+  function pct(m){ var v = (m - 1) * 100; return (v >= 0 ? '+' : '') + v.toFixed(1) + ' %'; }
+
+  function renderTable(d){
+    var html = '';
+    html += row('Masse totale en mouvement', d.M.toFixed(1) + ' kg');
+    html += row('Charge avant / arrière', (d.M*d.frontPct/100).toFixed(1) + ' / ' + (d.M*(1-d.frontPct/100)).toFixed(1) + ' kg');
+    html += row('Largeur réelle avant / arrière', d.F.wEff.toFixed(1) + ' / ' + d.R.wEff.toFixed(1) + ' mm');
+    html += row('Base à 15 % d\'affaissement', fmt(d.F.base) + ' / ' + fmt(d.R.base) + ' ' + unit);
+    html += row(d.mount.label, pct(d.mount.p));
+    html += row(d.casing.label, pct(d.casing.p));
+    html += row(d.surf.label, pct(d.surf.p));
+    html += row('Vitesse ' + d.v + ' km/h', pct(d.mSpeed));
+    html += row(d.dur.label, pct(d.dur.p));
+    html += row(d.tech.label, pct(d.tech.p));
+    if(d.wet) html += row('Chaussée mouillée', pct(d.mWet));
+    html += row('Arbitrage', pct(d.mBias));
+    html += row('Correction cumulée', pct(d.mTotal));
+    html += row('Coefficient de roulement retenu', d.crr.toFixed(4));
+    $('breakdown').innerHTML = html;
+  }
+
+  function run(){
+    var d = compute();
+    renderWheel('front', d.F);
+    renderWheel('rear', d.R);
+    var ul = $('flags');
+    ul.innerHTML = d.flags.map(function(f){ return '<li class="' + f.c + '">' + f.t + '</li>'; }).join('');
+    renderChart(d);
+    renderTable(d);
+  }
+
+  document.getElementById('form').addEventListener('input', run);
+  document.getElementById('form').addEventListener('change', run);
+  $('u-psi').addEventListener('click', function(){ unit='psi'; $('u-psi').setAttribute('aria-pressed','true'); $('u-bar').setAttribute('aria-pressed','false'); run(); });
+  $('u-bar').addEventListener('click', function(){ unit='bar'; $('u-bar').setAttribute('aria-pressed','true'); $('u-psi').setAttribute('aria-pressed','false'); run(); });
+  $('reset').addEventListener('click', function(){
+    fields.forEach(function(f){ $(f).value = DEFAULTS[f]; });
+    $('same').checked = true;
+    run();
+  });
+  run();
+})();
+</script>
+</body>
+</html>
