@@ -1,4 +1,6 @@
-# Tire Pressure Calculator
+<img src="assets/logo.svg" alt="" width="72">
+
+# tire-pressure-calculator
 
 Calculateur de pression de pneus pour vélo de contre-la-montre et de triathlon. Une page HTML autonome, sans dépendance, sans build, sans serveur. On saisit la charge, le montage et le parcours, on obtient la valeur à afficher au manomètre pour la roue avant et pour la roue arrière, avec le détail de chaque correction appliquée.
 
@@ -316,6 +318,14 @@ Méthode de calage recommandée : partez d'une pression que vous savez bonne par
 ## Structure du code
 
 Un seul fichier, `index.html`, environ 600 lignes, sans dépendance.
+
+```
+index.html          l'application entière
+assets/logo.svg     le logo, aussi utilisé comme favicon
+README.md
+```
+
+Détail de `index.html` :
 
 ```
 <head>
